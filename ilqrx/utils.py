@@ -188,14 +188,14 @@ def regularize(Q, R, M, psd_delta):
 
 
 def lagrangian(cost, dynamics, x0):
-    """Returns a function to evaluate Lagrangian.
+    # """Returns a function to evaluate Lagrangian.
 
-    L(X, U, Y) = y_0^T (\hat{x}_0 - x_0) + \sum_{k=0}^{N-1} [ l(x_k, u_k) + y_{k+1}^T ( f(x_k, u_k) - x_{k+1} ) ] + l(x_N)
-    l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) + y_k^T (\hat{x}_0 - x_k)   k == 0
-    l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) - y_k^T x_k                 k == 1,...,N-1
-    l(x_N)                                                          k == N
+    # L(X, U, Y) = y_0^T (\hat{x}_0 - x_0) + \sum_{k=0}^{N-1} [ l(x_k, u_k) + y_{k+1}^T ( f(x_k, u_k) - x_{k+1} ) ] + l(x_N)
+    # l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) + y_k^T (\hat{x}_0 - x_k)   k == 0
+    # l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) - y_k^T x_k                 k == 1,...,N-1
+    # l(x_N)                                                          k == N
     
-    """
+    # """
     def fun(x, u, t, y, y_next):
         c1 = cost(x, u, t)
         c2 = jnp.dot(y_next, dynamics(x, u, t))
@@ -203,6 +203,40 @@ def lagrangian(cost, dynamics, x0):
         return c1 + c2 + c3
     return fun
 
+# def lagrangian(cost_model, dynamic_model, x0):
+#     """Returns a function to evaluate Lagrangian.
+
+#     L(X, U, Y) = y_0^T (\hat{x}_0 - x_0) + \sum_{k=0}^{N-1} [ l(x_k, u_k) + y_{k+1}^T ( f(x_k, u_k) - x_{k+1} ) ] + l(x_N)
+#     l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) + y_k^T (\hat{x}_0 - x_k)   k == 0
+#     l(x_k, u_k) + y_{k+1}^T f(x_k, u_k) - y_k^T x_k                 k == 1,...,N-1
+#     l(x_N)                                                          k == N
+    
+#     """
+#     def fun(x, u, t, y, y_next):
+#         c1 = cost(x, u, t)
+#         c2 = jnp.dot(y_next, dynamics(x, u, t))
+#         c3 = jnp.dot(y, lax.select(t == 0, x0 - x, -x))
+#         return c1 + c2 + c3
+#     return fun                                
+
+def hamilton(cost, dynamics):
+    def fun(x, u, t, y_next):
+        c1 = cost(x, u, t)
+        c2 = jnp.dot(y_next, dynamics(x, u, t))
+        return c1 + c2
+    return fun
+
+# def compute_hessians(cost_model, dynamic_model):
+#     if dynamic_model.use_quaternion:
+#         def stage_hessian(x, u, t, y_next):
+#             del y_next
+#             return cost_model.hessian(x, u, t)
+#     else:
+#         def stage_hessian(x, u, t, y, y_next):
+#             hamilton_fn = hamilton(cost_model.cost_fn, dynamic_model.dynamics_dt)
+#             hessian_x = hessian
+        
+#     return vectorize(stage_hessian, argnums=5)
 
 def compute_defects(dynamics_defect, X, U):   
     timesteps = jnp.arange(X.shape[0] - 1) 
