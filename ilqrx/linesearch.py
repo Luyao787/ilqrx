@@ -1,7 +1,6 @@
 import jax
 import jax.lax as lax
 import jax.numpy as jnp
-from functools import partial
 from ilqrx.utils import pad, traj_cost
 
 def serial_linesearch_al(
@@ -106,13 +105,17 @@ def serial_linesearch_al(
         return jnp.logical_and(iter_id < max_ls_iters, sufficent_decrease_flag == False)
     
     def update_penalty_weight(mu_dyn_prev, dphi_0):
+        
+        # jax.debug.print("Updating penalty weight, dphi_0: {dphi_0}, quad_redu: {quad_redu}, mu_dyn_prev: {mu_dyn_prev}", 
+                        # dphi_0=dphi_0, quad_redu=quad_redu, mu_dyn_prev=mu_dyn_prev)
+        
         timesteps = jnp.arange(X.shape[0] - 1)
         defects = jax.vmap(compute_defect)(X[:-1], U, timesteps, X[1:])
         defects_flat = defects.flatten()
         delta_Y_dyn_flat = delta_Y_dyn[1:].flatten()
         
         mu_dyn_hat =  2 * jnp.linalg.norm(delta_Y_dyn_flat, ord=2) / jnp.linalg.norm(defects_flat, ord=2)
-        mu_dyn = jnp.where(dphi_0 < quad_redu,
+        mu_dyn = jnp.where(dphi_0 < -quad_redu, # do not forget the negative sign here
                            mu_dyn_prev,
                            jnp.maximum(mu_dyn_hat, 2 * mu_dyn_prev))
     
@@ -121,6 +124,8 @@ def serial_linesearch_al(
     dphi0 = merit_derivative_fn(0.0, mu_dyn_prev)
     mu_dyn = update_penalty_weight(mu_dyn_prev, dphi0)
     
+    # jax.debug.print("mu: {}, mu_prev:{}", mu_dyn, mu_dyn_prev)
+
     phi0 = merit_fn(0.0, mu_dyn)
     dphi0 = merit_derivative_fn(0.0, mu_dyn)
     
